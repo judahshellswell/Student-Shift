@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { AppLogo } from '@/components/layout/AppLogo';
+import { useAuthStore } from '@/stores/authStore';
 
 function FeatureIcon({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +13,10 @@ function FeatureIcon({ children }: { children: React.ReactNode }) {
 }
 
 export default function LandingPage() {
+  const { isInitialized, isAuthenticated, userType } = useAuthStore();
+  const dashboardHref = userType === 'business' ? '/business' : '/student';
+  const showLoggedIn = isInitialized && isAuthenticated;
+
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
@@ -17,10 +24,18 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <AppLogo />
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="text-sm font-medium text-gray-600 hover:text-primary">Sign in</Link>
-            <Link href="/auth/welcome" className="text-sm font-semibold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
-              Get started free
-            </Link>
+            {showLoggedIn ? (
+              <Link href={dashboardHref} className="text-sm font-semibold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                Go to dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth/login" className="text-sm font-medium text-gray-600 hover:text-primary">Sign in</Link>
+                <Link href="/auth/welcome" className="text-sm font-semibold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                  Get started free
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -38,17 +53,27 @@ export default function LandingPage() {
           <p className="text-lg text-text-secondary mb-8 max-w-xl mx-auto">
             StudentShift connects students aged 16–24 to part-time and shift work in the Channel Islands, Isle of Man, and the UK.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/auth/register/student" className="bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors text-center">
-              Find a job
-            </Link>
-            <Link href="/auth/register/business" className="bg-white text-secondary-dark font-semibold px-6 py-3 rounded-lg border-2 border-secondary hover:bg-secondary-bg transition-colors text-center">
-              Post a job
-            </Link>
-          </div>
-          <p className="text-sm text-text-secondary mt-4">
-            <Link href="/jobs" className="hover:underline">Browse jobs without signing up →</Link>
-          </p>
+          {showLoggedIn ? (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href={dashboardHref} className="bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors text-center">
+                Go to your dashboard
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/auth/register/student" className="bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors text-center">
+                  Find a job
+                </Link>
+                <Link href="/auth/register/business" className="bg-white text-secondary-dark font-semibold px-6 py-3 rounded-lg border-2 border-secondary hover:bg-secondary-bg transition-colors text-center">
+                  Post a job
+                </Link>
+              </div>
+              <p className="text-sm text-text-secondary mt-4">
+                <Link href="/jobs" className="hover:underline">Browse jobs without signing up →</Link>
+              </p>
+            </>
+          )}
         </div>
       </section>
 
@@ -88,8 +113,8 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/auth/register/student" className="bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors inline-block">
-              Start for free →
+            <Link href={showLoggedIn ? dashboardHref : '/auth/register/student'} className="bg-primary text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors inline-block">
+              {showLoggedIn ? 'Go to dashboard →' : 'Start for free →'}
             </Link>
           </div>
         </div>
@@ -116,8 +141,8 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="text-center mt-8">
-            <Link href="/auth/register/business" className="bg-secondary text-white font-semibold px-6 py-3 rounded-lg hover:bg-secondary-dark transition-colors inline-block">
-              Post a job free →
+            <Link href={showLoggedIn ? dashboardHref : '/auth/register/business'} className="bg-secondary text-white font-semibold px-6 py-3 rounded-lg hover:bg-secondary-dark transition-colors inline-block">
+              {showLoggedIn ? 'Go to dashboard →' : 'Post a job free →'}
             </Link>
           </div>
         </div>
@@ -139,8 +164,14 @@ export default function LandingPage() {
           <AppLogo />
           <div className="flex gap-6 text-sm text-text-secondary">
             <Link href="/jobs" className="hover:text-gray-900">Browse Jobs</Link>
-            <Link href="/auth/welcome" className="hover:text-gray-900">Sign Up</Link>
-            <Link href="/auth/login" className="hover:text-gray-900">Sign In</Link>
+            {showLoggedIn ? (
+              <Link href={dashboardHref} className="hover:text-gray-900">Dashboard</Link>
+            ) : (
+              <>
+                <Link href="/auth/welcome" className="hover:text-gray-900">Sign Up</Link>
+                <Link href="/auth/login" className="hover:text-gray-900">Sign In</Link>
+              </>
+            )}
           </div>
           <p className="text-xs text-text-secondary">© {new Date().getFullYear()} StudentShift</p>
         </div>

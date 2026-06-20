@@ -436,6 +436,14 @@ export interface Report {
   resolved_at: string | null;
 }
 
+export interface CreateReportForm {
+  reported_id: string;
+  reported_type: 'user' | 'message' | 'job' | 'review';
+  category: ReportCategory;
+  description: string;
+  conversation_id?: string;
+}
+
 export interface BlockedUser {
   id: string;
   blocker_id: string;

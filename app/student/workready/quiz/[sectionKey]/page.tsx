@@ -151,7 +151,7 @@ export default function QuizPage() {
             {' '}All quiz completions earn +6 pts regardless of score.
           </p>
           <Button fullWidth size="lg" loading={loading} onClick={handleFinish}>
-            Claim +6 pts and return to Work Ready
+            {alreadyDone ? 'Done — return to Work Ready' : 'Claim +6 pts and return to Work Ready'}
           </Button>
         </div>
       )}

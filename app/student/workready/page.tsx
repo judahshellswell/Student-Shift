@@ -102,7 +102,7 @@ export default function WorkReadyPage() {
               {quizzes.map((quiz) => {
                 const done = completedContent.includes(quiz.key);
                 return (
-                  <Link key={quiz.key} href={done ? '#' : `/student/workready/quiz/${quiz.key}`}>
+                  <Link key={quiz.key} href={`/student/workready/quiz/${quiz.key}`}>
                     <div className={cn(
                       'bg-white rounded-lg border px-4 py-3 flex items-center gap-3 hover:shadow-sm transition-shadow cursor-pointer',
                       done ? 'border-green-200 bg-green-50' : 'border-gray-200'
@@ -136,7 +136,7 @@ export default function WorkReadyPage() {
         {(() => {
           const done = completedContent.includes(FINAL_QUIZ.key);
           return (
-            <Link href={done ? '#' : `/student/workready/quiz/${FINAL_QUIZ.key}`}>
+            <Link href={`/student/workready/quiz/${FINAL_QUIZ.key}`}>
               <div className={cn(
                 'bg-white rounded-lg border px-4 py-3 flex items-center gap-3 hover:shadow-sm transition-shadow cursor-pointer',
                 done ? 'border-green-200 bg-green-50' : 'border-secondary-bg border-dashed'

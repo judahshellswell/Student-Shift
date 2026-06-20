@@ -4,6 +4,8 @@ import { useState, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useReadinessScore } from '@/hooks/useReadinessScore';
 import { useUpdateStudentProfile, useUploadAvatar, useUploadCV, useUploadIntroVideo, usePortfolioPosts, useAddPortfolioPost, useDeletePortfolioPost } from '@/hooks/useProfile';
+import { useStudentReviews, useStudentRatings } from '@/hooks/useReviews';
+import { useSubmitReport } from '@/hooks/useReporting';
 import { useToast } from '@/components/providers/ToastProvider';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,10 +17,11 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { ReadinessScoreRing } from '@/components/ui/ReadinessScoreRing';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { ReviewCard } from '@/components/student/ReviewCard';
 import { COMMON_SKILLS, DAYS_OF_WEEK, DAY_LABELS, getParishOptionsForRegion, REGIONS, PORTFOLIO_POST_TYPES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { getVideoDuration } from '@/lib/firebase';
-import type { Availability, DayHours, PortfolioPostType } from '@/types';
+import type { Availability, DayHours, PortfolioPostType, Review } from '@/types';
 
 export default function StudentProfilePage() {
   const { studentProfile, signOut } = useAuthStore();
@@ -34,10 +37,39 @@ export default function StudentProfilePage() {
   const deletePost = useDeletePortfolioPost();
   const { showSuccess, showError } = useToast();
 
+  const { data: reviews = [] } = useStudentReviews(studentProfile?.id);
+  const ratings = useStudentRatings(studentProfile?.id);
+  const submitReport = useSubmitReport();
+
   const [editBio, setEditBio] = useState(false);
   const [bio, setBio] = useState(studentProfile?.bio || '');
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const [newPost, setNewPost] = useState({ type: 'work_experience' as PortfolioPostType, title: '', organization: '', description: '', start_date: '', end_date: '', is_current: false });
+  const [disputeReview, setDisputeReview] = useState<Review | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+
+  const handleOpenDispute = (review: Review) => {
+    setDisputeReview(review);
+    setDisputeReason('');
+  };
+
+  const handleSubmitDispute = async () => {
+    if (!disputeReview) return;
+    if (!disputeReason.trim()) { showError('Please provide a reason for your dispute.'); return; }
+    try {
+      await submitReport.mutateAsync({
+        reported_id: disputeReview.id,
+        reported_type: 'review',
+        category: 'other',
+        description: `Review dispute: ${disputeReason.trim()}`,
+      });
+      setDisputeReview(null);
+      setDisputeReason('');
+      showSuccess('Your dispute has been sent for moderation.');
+    } catch {
+      showError('Failed to submit dispute. Please try again.');
+    }
+  };
 
   const name = studentProfile ? `${studentProfile.first_name} ${studentProfile.last_name}` : '';
 
@@ -270,6 +302,25 @@ export default function StudentProfilePage() {
         )}
       </Card>
 
+      {/* Reviews */}
+      <Card padding="md">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-900">Reviews</h3>
+          {ratings.totalReviews > 0 && (
+            <span className="text-xs text-text-secondary">★ {ratings.averageRating.toFixed(1)} ({ratings.totalReviews})</span>
+          )}
+        </div>
+        {reviews.length === 0 ? (
+          <p className="text-xs text-text-secondary">Complete jobs to receive reviews from employers.</p>
+        ) : (
+          <div>
+            {reviews.map((review) => (
+              <ReviewCard key={review.id} review={review} onDispute={handleOpenDispute} />
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Sign out / danger zone */}
       <Card padding="md">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Account</h3>
@@ -301,6 +352,26 @@ export default function StudentProfilePage() {
           <div className="flex gap-3">
             <Button variant="ghost" fullWidth onClick={() => setPortfolioOpen(false)}>Cancel</Button>
             <Button fullWidth loading={addPost.isPending} onClick={handleAddPortfolioPost}>Add</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Dispute review modal */}
+      <Modal open={!!disputeReview} onClose={() => setDisputeReview(null)} title="Dispute this review">
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Tell us why you think this review is unfair or inaccurate. An admin will review your dispute and may remove the review if it violates our guidelines.
+          </p>
+          <Textarea
+            label="Your reason"
+            value={disputeReason}
+            onChange={(e) => setDisputeReason(e.target.value)}
+            rows={4}
+            placeholder="Briefly explain why this review should be removed..."
+          />
+          <div className="flex gap-3">
+            <Button variant="ghost" fullWidth onClick={() => setDisputeReview(null)}>Cancel</Button>
+            <Button variant="danger" fullWidth loading={submitReport.isPending} onClick={handleSubmitDispute}>Submit dispute</Button>
           </div>
         </div>
       </Modal>

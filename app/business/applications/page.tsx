@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/SkeletonCard';
 import { StudentProfileDrawer } from '@/components/business/StudentProfileDrawer';
 import { useToast } from '@/components/providers/ToastProvider';
 import { formatRelativeDate, APPLICATION_STATUS_COLORS, APPLICATION_STATUS_LABELS } from '@/lib/utils';
-import type { Application, ApplicationStatus, Student } from '@/types';
+import type { Application, ApplicationStatus } from '@/types';
 
 const STATUS_OPTIONS: ApplicationStatus[] = ['pending', 'reviewed', 'shortlisted', 'hired', 'rejected'];
 
@@ -25,10 +25,13 @@ export default function BusinessApplicationsPage() {
   const { showSuccess, showError } = useToast();
 
   const [selectedJob, setSelectedJob] = useState(defaultJob);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const filtered = applications?.filter((a) => selectedJob === 'all' || a.job_id === selectedJob) ?? [];
+
+  // Re-derived from the live applications list so it stays in sync after a status change (e.g. hired)
+  const selectedApp = applications?.find((a) => a.id === selectedAppId) ?? null;
 
   const handleStatusChange = async (appId: string, status: ApplicationStatus) => {
     try {
@@ -39,7 +42,7 @@ export default function BusinessApplicationsPage() {
 
   const openStudentProfile = (app: Application) => {
     if (app.student) {
-      setSelectedStudent(app.student);
+      setSelectedAppId(app.id);
       setDrawerOpen(true);
     }
   };
@@ -117,7 +120,13 @@ export default function BusinessApplicationsPage() {
         </div>
       )}
 
-      <StudentProfileDrawer student={selectedStudent} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <StudentProfileDrawer
+        student={selectedApp?.student ?? null}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        applicationStatus={selectedApp?.status}
+        jobId={selectedApp?.job_id}
+      />
     </div>
   );
 }
