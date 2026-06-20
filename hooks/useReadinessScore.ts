@@ -41,7 +41,7 @@ export function computeReadinessScore(profile: Student | null, completedContent:
 
   const items: ReadinessItem[] = [
     { key: 'photo', label: 'Profile photo', description: 'Employers want to put a face to a name', points: 10, isComplete: !!profile.avatar_url, category: 'profile' },
-    { key: 'bio', label: 'Written a bio', description: 'Tell employers a bit about yourself', points: 10, isComplete: !!(profile.bio && profile.bio.trim().length >= 20), category: 'profile' },
+    { key: 'bio', label: 'Written a bio', description: 'Tell employers a bit about yourself', points: 10, isComplete: !!(profile.bio && profile.bio.trim().length >= 5), category: 'profile' },
     { key: 'skills', label: 'Added skills', description: 'At least 3 skills listed', points: 10, isComplete: !!(profile.skills && profile.skills.length >= 3), category: 'profile' },
     { key: 'availability', label: 'Set availability', description: 'Employers need to know when you can work', points: 10, isComplete: !!hasAvailability, category: 'profile' },
     { key: 'cv', label: 'Uploaded a CV', description: 'Even a basic CV makes a big difference', points: 10, isComplete: !!profile.cv_url, category: 'profile' },

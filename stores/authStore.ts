@@ -136,6 +136,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw error;
     } finally {
       set({ isLoading: false });
+      // Replace history so back/forward can't restore a cached authenticated page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }
   },
 
