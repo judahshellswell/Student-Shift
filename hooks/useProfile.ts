@@ -124,20 +124,6 @@ export function useStudentReviews(studentId?: string) {
   });
 }
 
-export function useTemplates() {
-  const { user } = useAuthStore();
-  return useQuery({
-    queryKey: ['templates', user?.uid],
-    queryFn: async () => {
-      if (!user) throw new Error('Not authenticated');
-      const q = query(collection(db, 'applicationTemplates'), where('student_id', '==', user.uid));
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    },
-    enabled: !!user,
-  });
-}
-
 export function useUploadBusinessLogo() {
   const { user, updateBusinessProfile } = useAuthStore();
   return useMutation({

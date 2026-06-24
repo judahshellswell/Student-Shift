@@ -8,6 +8,9 @@ import {
 import type { Job, CreateJobForm, Business, Student } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { normalizeBusinessData, toDateString } from '@/lib/utils';
+import { getRegionForParish, getSheadingForParish } from '@/lib/constants';
+import { calculateDistanceKm, getJobDistanceKm, distanceToScore, DEFAULT_SEARCH_RADIUS_KM } from '@/lib/geocoding';
+import { useBlockedUsers } from '@/hooks/useBlocking';
 
 export interface JobFilters {
   jobTypes?: string[];
@@ -17,55 +20,59 @@ export interface JobFilters {
 }
 
 function getRegionForParishLocal(parish: string): string | null {
-  const jerseyParishes = ['Grouville','St. Brelade','St. Clement','St. Helier','St. John','St. Lawrence','St. Martin','St. Mary','St. Ouen','St. Peter','St. Saviour','Trinity'];
-  const guernseyParishes = ['Castel','Forest','St Andrew','St Martin','St Peter Port','St Pierre du Bois','St Sampson','St Saviour','Torteval','Vale','Alderney','Sark'];
-  const iomSheadings = ['Ayre','Garff','Glenfaba','Michael','Middle','Rushen'];
-  const iomParishes = ['Andreas','Bride','Lezayre','Lonan','Maughold','German','Patrick','Ballaugh','Jurby','Michael','Braddan','Marown','Onchan','Santon','Douglas','Arbory','Malew','Rushen'];
-  if (jerseyParishes.includes(parish)) return 'Jersey';
-  if (guernseyParishes.includes(parish)) return 'Guernsey';
-  if (iomSheadings.includes(parish) || iomParishes.includes(parish)) return 'Isle of Man';
-  return null;
+  return getRegionForParish(parish);
 }
 
+// Mirrors calculateMatchScore in the mobile app's src/hooks/useJobs.ts exactly —
+// location 40pts + skills 40pts + availability 20pts, fixed 100pt scale — so
+// the match % shown here always agrees with mobile and the push notification.
 function calculateMatchScore(job: Job, student: Student): number {
   let score = 0;
   const maxScore = 100;
 
-  // Location score (40 pts)
-  const studentRegion = student.region;
-  if (studentRegion && studentRegion !== 'UK') {
-    const jobRegion = job.region || (job.parish ? getRegionForParishLocal(job.parish) : null);
-    if (!jobRegion || jobRegion === studentRegion) {
-      if (job.parish && student.preferred_parishes?.includes(job.parish)) score += 40;
-      else if (!student.preferred_parishes?.length) score += 20;
-      else score += 10;
+  // Location match (40 points max)
+  if (student.region === 'UK') {
+    const distance = getJobDistanceKm(student.latitude, student.longitude, job.latitude, job.longitude);
+    if (distance !== null) {
+      const radiusKm = student.search_radius_km ?? DEFAULT_SEARCH_RADIUS_KM;
+      score += distanceToScore(distance, radiusKm);
+    } else if (!student.latitude || !student.longitude) {
+      score += 20;
     }
-  } else if (studentRegion === 'UK') {
-    score += 20; // simplified for UK
-  } else {
+  } else if (job.parish && student.preferred_parishes?.length > 0) {
+    const jobSheading = getSheadingForParish(job.parish);
+    const matchesLocation = student.preferred_parishes.includes(job.parish) ||
+      (jobSheading ? student.preferred_parishes.includes(jobSheading) : false);
+    if (matchesLocation) score += 40;
+  } else if (!student.preferred_parishes?.length) {
     score += 20;
   }
 
-  // Skills score (40 pts)
-  if (job.required_skills?.length > 0 && student.skills?.length > 0) {
-    const matched = job.required_skills.filter((s) => student.skills.includes(s)).length;
-    score += Math.round((matched / job.required_skills.length) * 40);
-  } else {
+  // Skills match (40 points max)
+  if (job.required_skills && job.required_skills.length > 0 && student.skills?.length > 0) {
+    const matchedSkills = job.required_skills.filter((skill) =>
+      student.skills.some((s) => s.toLowerCase() === skill.toLowerCase())
+    );
+    score += Math.round((matchedSkills.length / job.required_skills.length) * 40);
+  } else if (!job.required_skills?.length) {
     score += 40;
   }
 
-  // Availability score (20 pts)
-  const hasAvailability = student.availability && Object.values(student.availability).some((v) => v != null);
-  if (hasAvailability) score += 20;
+  // Availability match (20 points max)
+  if (student.availability && Object.keys(student.availability).length > 0) {
+    score += 20;
+  }
 
   return Math.round((score / maxScore) * 100);
 }
 
 export function useJobs(filters?: JobFilters) {
   const { studentProfile } = useAuthStore();
+  const { data: blockedUsers } = useBlockedUsers();
+  const blockedIds = new Set((blockedUsers || []).map((b) => b.blocked_id));
 
   return useQuery({
-    queryKey: ['jobs', filters, studentProfile?.region],
+    queryKey: ['jobs', filters, studentProfile?.region, Array.from(blockedIds).sort().join(',')],
     queryFn: async () => {
       const q = query(collection(db, 'jobs'), where('status', '==', 'active'));
       const snapshot = await getDocs(q);
@@ -74,6 +81,8 @@ export function useJobs(filters?: JobFilters) {
 
       for (const docSnap of snapshot.docs) {
         const jobData = { id: docSnap.id, ...docSnap.data() } as Job;
+
+        if (blockedIds.has(jobData.business_id)) continue;
 
         if (studentRegion) {
           const jobRegion = jobData.region || (jobData.parish ? getRegionForParishLocal(jobData.parish) : null);

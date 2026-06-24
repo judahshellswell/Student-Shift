@@ -117,6 +117,23 @@ export function getParishOptionsForRegion(region: string | null): string[] {
   }
 }
 
+// Determine which region a parish belongs to
+export function getRegionForParish(parish: string): string | null {
+  if (PARISHES.includes(parish)) return 'Jersey';
+  if (GUERNSEY_PARISHES.includes(parish)) return 'Guernsey';
+  if (IOM_PARISHES.includes(parish) || IOM_SHEADING_NAMES.includes(parish)) return 'Isle of Man';
+  return null;
+}
+
+// Get the sheading name for an IoM parish
+export function getSheadingForParish(parish: string): string | null {
+  for (const [sheading, parishes] of Object.entries(IOM_SHEADINGS)) {
+    if (parishes.includes(parish)) return sheading;
+  }
+  if (IOM_SHEADING_NAMES.includes(parish)) return parish;
+  return null;
+}
+
 export const JOB_TYPES: { value: JobType; label: string; description: string }[] = [
   { value: 'part_time', label: 'Part-time', description: 'Regular hours each week' },
   { value: 'temporary', label: 'Temporary', description: 'Fixed period of work' },

@@ -6,6 +6,7 @@ import { useReadinessScore } from '@/hooks/useReadinessScore';
 import { useUpdateStudentProfile, useUploadAvatar, useUploadCV, useUploadIntroVideo, usePortfolioPosts, useAddPortfolioPost, useDeletePortfolioPost } from '@/hooks/useProfile';
 import { useStudentReviews, useStudentRatings } from '@/hooks/useReviews';
 import { useSubmitReport } from '@/hooks/useReporting';
+import { useBlockedUsers, useUnblockUser } from '@/hooks/useBlocking';
 import { useToast } from '@/components/providers/ToastProvider';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -40,6 +41,8 @@ export default function StudentProfilePage() {
   const { data: reviews = [] } = useStudentReviews(studentProfile?.id);
   const ratings = useStudentRatings(studentProfile?.id);
   const submitReport = useSubmitReport();
+  const { data: blockedUsers = [] } = useBlockedUsers();
+  const unblockUser = useUnblockUser();
 
   const [editBio, setEditBio] = useState(false);
   const [bio, setBio] = useState(studentProfile?.bio || '');
@@ -320,6 +323,33 @@ export default function StudentProfilePage() {
           </div>
         )}
       </Card>
+
+      {/* Blocked businesses */}
+      {blockedUsers.length > 0 && (
+        <Card padding="md">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Blocked businesses ({blockedUsers.length})</h3>
+          <div className="space-y-2">
+            {blockedUsers.map((blocked) => (
+              <div key={blocked.id} className="flex items-center justify-between py-1.5">
+                <p className="text-sm text-gray-700">{(blocked as any).blocked_name || blocked.blocked_id}</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      await unblockUser.mutateAsync(blocked.blocked_id);
+                      showSuccess('Business unblocked.');
+                    } catch {
+                      showError('Failed to unblock. Please try again.');
+                    }
+                  }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Unblock
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Sign out / danger zone */}
       <Card padding="md">

@@ -8,6 +8,7 @@ import { useHasApplied } from '@/hooks/useApplications';
 import { useAuthStore } from '@/stores/authStore';
 import { useReadinessScore } from '@/hooks/useReadinessScore';
 import { ApplyModal } from '@/components/student/ApplyModal';
+import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
@@ -15,6 +16,8 @@ import { Skeleton } from '@/components/ui/SkeletonCard';
 import { formatPay, formatHours, formatAbsoluteDate, formatRelativeDate } from '@/lib/utils';
 import { JOB_TYPE_LABELS } from '@/lib/constants';
 import { useToggleSaveJob, useSavedJobs } from '@/hooks/useJobs';
+import { useIsBlocked, useBlockUser } from '@/hooks/useBlocking';
+import { useToast } from '@/components/providers/ToastProvider';
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +29,10 @@ export default function JobDetailPage() {
   const { data: savedJobs } = useSavedJobs();
   const toggleSave = useToggleSaveJob();
   const [applyOpen, setApplyOpen] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const isBusinessBlocked = useIsBlocked(job?.business_id);
+  const blockUser = useBlockUser();
+  const { showSuccess, showError } = useToast();
 
   const isSaved = savedJobs?.some((s) => s.job_id === id) ?? false;
   const isWorkReady = readiness.level === 'work_ready';
@@ -140,6 +147,14 @@ export default function JobDetailPage() {
             </div>
           </div>
           {job.business.description && <p className="text-sm text-gray-600">{job.business.description}</p>}
+          {!isBusinessBlocked && (
+            <button
+              onClick={() => setShowBlockConfirm(true)}
+              className="mt-3 text-xs text-gray-400 hover:text-error"
+            >
+              🚫 Block this business
+            </button>
+          )}
         </div>
       )}
 
@@ -168,6 +183,34 @@ export default function JobDetailPage() {
       </div>
 
       {job && <ApplyModal job={job} open={applyOpen} onClose={() => setApplyOpen(false)} />}
+
+      <Modal open={showBlockConfirm} onClose={() => setShowBlockConfirm(false)} title="Block this business?">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Their jobs will be hidden from your feed and they won&apos;t be able to message you.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="ghost" fullWidth onClick={() => setShowBlockConfirm(false)}>Cancel</Button>
+            <Button
+              variant="danger"
+              fullWidth
+              loading={blockUser.isPending}
+              onClick={async () => {
+                if (!job?.business_id) return;
+                try {
+                  await blockUser.mutateAsync(job.business_id);
+                  showSuccess('Business blocked. Their jobs are now hidden from your feed.');
+                  setShowBlockConfirm(false);
+                } catch {
+                  showError('Failed to block business. Please try again.');
+                }
+              }}
+            >
+              Block
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

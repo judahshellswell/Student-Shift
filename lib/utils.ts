@@ -39,6 +39,9 @@ export function formatPay(job: Pick<Job, 'is_pay_negotiable' | 'hourly_rate_min'
   if (job.is_pay_negotiable) return 'Negotiable';
   if (job.pay_description) return job.pay_description;
   if (job.hourly_rate_min && job.hourly_rate_max) {
+    if (job.hourly_rate_min === job.hourly_rate_max) {
+      return `£${job.hourly_rate_min.toFixed(2)}/hr`;
+    }
     return `£${job.hourly_rate_min.toFixed(2)}–£${job.hourly_rate_max.toFixed(2)}/hr`;
   }
   if (job.hourly_rate_min) return `£${job.hourly_rate_min.toFixed(2)}/hr`;
@@ -49,6 +52,9 @@ export function formatPay(job: Pick<Job, 'is_pay_negotiable' | 'hourly_rate_min'
 export function formatHours(job: Pick<Job, 'is_hours_negotiable' | 'hours_per_week_min' | 'hours_per_week_max'>): string {
   if (job.is_hours_negotiable) return 'Hours negotiable';
   if (job.hours_per_week_min && job.hours_per_week_max) {
+    if (job.hours_per_week_min === job.hours_per_week_max) {
+      return `${job.hours_per_week_min} hrs/wk`;
+    }
     return `${job.hours_per_week_min}–${job.hours_per_week_max} hrs/wk`;
   }
   if (job.hours_per_week_min) return `${job.hours_per_week_min}+ hrs/wk`;

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUploadBusinessLogo } from '@/hooks/useProfile';
+import { useBlockedUsers, useUnblockUser } from '@/hooks/useBlocking';
 import { useToast } from '@/components/providers/ToastProvider';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +16,8 @@ import { Badge } from '@/components/ui/Badge';
 export default function BusinessProfilePage() {
   const { businessProfile, updateBusinessProfile, signOut } = useAuthStore();
   const uploadLogo = useUploadBusinessLogo();
+  const { data: blockedUsers = [] } = useBlockedUsers();
+  const unblockUser = useUnblockUser();
   const { showSuccess, showError } = useToast();
 
   const [editing, setEditing] = useState(false);
@@ -137,6 +140,33 @@ export default function BusinessProfilePage() {
           </div>
         )}
       </Card>
+
+      {/* Blocked students */}
+      {blockedUsers.length > 0 && (
+        <Card padding="md">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Blocked students ({blockedUsers.length})</h3>
+          <div className="space-y-2">
+            {blockedUsers.map((blocked) => (
+              <div key={blocked.id} className="flex items-center justify-between py-1.5">
+                <p className="text-sm text-gray-700">{(blocked as any).blocked_name || blocked.blocked_id}</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      await unblockUser.mutateAsync(blocked.blocked_id);
+                      showSuccess('Student unblocked.');
+                    } catch {
+                      showError('Failed to unblock. Please try again.');
+                    }
+                  }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Unblock
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Sign out */}
       <Card padding="md">

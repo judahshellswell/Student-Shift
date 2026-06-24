@@ -53,10 +53,18 @@ export function JobForm({ value, onChange, onSaveDraft, onPublish, loading, isEd
             Pay is negotiable
           </label>
           {!value.is_pay_negotiable && (
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="Min rate (£/hr)" type="number" min={0} step={0.01} value={value.hourly_rate_min || ''} onChange={(e) => set({ hourly_rate_min: parseFloat(e.target.value) || undefined })} placeholder="9.50" />
-              <Input label="Max rate (£/hr)" type="number" min={0} step={0.01} value={value.hourly_rate_max || ''} onChange={(e) => set({ hourly_rate_max: parseFloat(e.target.value) || undefined })} placeholder="12.00" />
-            </div>
+            <Input
+              label="Pay rate (£/hr)"
+              type="number"
+              min={0}
+              step={0.01}
+              value={value.hourly_rate_min || ''}
+              onChange={(e) => {
+                const rate = parseFloat(e.target.value) || undefined;
+                set({ hourly_rate_min: rate, hourly_rate_max: rate });
+              }}
+              placeholder="9.50"
+            />
           )}
           <Input label="Pay description (optional)" value={value.pay_description || ''} onChange={(e) => set({ pay_description: e.target.value })} placeholder="e.g. Depends on experience" />
         </div>
@@ -102,10 +110,16 @@ export function JobForm({ value, onChange, onSaveDraft, onPublish, loading, isEd
             Hours are negotiable
           </label>
           {!value.is_hours_negotiable && (
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="Min hrs/week" type="number" min={0} value={value.hours_per_week_min || ''} onChange={(e) => set({ hours_per_week_min: parseFloat(e.target.value) || undefined })} />
-              <Input label="Max hrs/week" type="number" min={0} value={value.hours_per_week_max || ''} onChange={(e) => set({ hours_per_week_max: parseFloat(e.target.value) || undefined })} />
-            </div>
+            <Input
+              label="Hours per week"
+              type="number"
+              min={0}
+              value={value.hours_per_week_min || ''}
+              onChange={(e) => {
+                const hours = parseFloat(e.target.value) || undefined;
+                set({ hours_per_week_min: hours, hours_per_week_max: hours });
+              }}
+            />
           )}
           <Textarea label="Shift pattern (optional)" value={value.shift_pattern || ''} onChange={(e) => set({ shift_pattern: e.target.value })} rows={2} placeholder="e.g. Weekends and some weekday evenings" />
           <label className="flex items-center gap-2 text-sm cursor-pointer">

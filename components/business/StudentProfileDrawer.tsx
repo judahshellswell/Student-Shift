@@ -11,6 +11,7 @@ import { ReadinessScoreRing } from '@/components/ui/ReadinessScoreRing';
 import { ReviewCard } from '@/components/student/ReviewCard';
 import { computeReadinessScore } from '@/hooks/useReadinessScore';
 import { useStudentReviews, useStudentRatings, useCreateReview } from '@/hooks/useReviews';
+import { useIsBlocked, useBlockUser, useUnblockUser } from '@/hooks/useBlocking';
 import { useToast } from '@/components/providers/ToastProvider';
 import { DAYS_OF_WEEK, DAY_LABELS } from '@/lib/constants';
 import type { Student, Availability, DayHours, ApplicationStatus } from '@/types';
@@ -39,8 +40,12 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
   const { data: reviews = [] } = useStudentReviews(student?.id);
   const ratings = useStudentRatings(student?.id);
   const createReview = useCreateReview();
+  const isBlocked = useIsBlocked(student?.id);
+  const blockUser = useBlockUser();
+  const unblockUser = useUnblockUser();
   const { showSuccess, showError } = useToast();
 
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewReliability, setReviewReliability] = useState(0);
@@ -63,6 +68,21 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
     setReviewWorkQuality(0);
     setReviewComment('');
     setReviewSkills([]);
+  };
+
+  const handleToggleBlock = async () => {
+    try {
+      if (isBlocked) {
+        await unblockUser.mutateAsync(student.id);
+        showSuccess(`${student.first_name} has been unblocked.`);
+      } else {
+        await blockUser.mutateAsync(student.id);
+        showSuccess(`${student.first_name} has been blocked.`);
+        setShowBlockConfirm(false);
+      }
+    } catch {
+      showError('Failed to update block status. Please try again.');
+    }
   };
 
   const handleSubmitReview = async () => {
@@ -93,16 +113,31 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
     <Drawer open={open} onClose={onClose} title="Applicant profile">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-start gap-4">
-          <Avatar src={student.avatar_url} name={name} size="xl" />
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">{name}</h2>
-            {student.school_or_college && <p className="text-sm text-text-secondary">{student.school_or_college}</p>}
-            <div className="mt-2">
-              <ReadinessScoreRing score={readiness.score} color={readiness.color} label={readiness.label} size={56} strokeWidth={5} />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <Avatar src={student.avatar_url} name={name} size="xl" />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{name}</h2>
+              {student.school_or_college && <p className="text-sm text-text-secondary">{student.school_or_college}</p>}
+              <div className="mt-2">
+                <ReadinessScoreRing score={readiness.score} color={readiness.color} label={readiness.label} size={56} strokeWidth={5} />
+              </div>
             </div>
           </div>
+          <button
+            onClick={() => isBlocked ? handleToggleBlock() : setShowBlockConfirm(true)}
+            className="flex-shrink-0 text-xs text-gray-400 hover:text-error"
+            title={isBlocked ? 'Unblock this student' : 'Block this student'}
+          >
+            {isBlocked ? 'Unblock' : 'Block'}
+          </button>
         </div>
+
+        {isBlocked && (
+          <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-xs text-text-secondary">
+            You have blocked this student. They cannot apply to your jobs or message you.
+          </div>
+        )}
 
         {/* Contact details — only once hired */}
         {isHired && (
@@ -192,6 +227,19 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
           </Button>
         )}
       </div>
+
+      {/* Block confirmation modal */}
+      <Modal open={showBlockConfirm} onClose={() => setShowBlockConfirm(false)} title="Block this student?">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            They won&apos;t be able to apply to your jobs or message you.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="ghost" fullWidth onClick={() => setShowBlockConfirm(false)}>Cancel</Button>
+            <Button variant="danger" fullWidth loading={blockUser.isPending} onClick={handleToggleBlock}>Block</Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Leave review modal */}
       <Modal open={showReviewModal} onClose={() => setShowReviewModal(false)} title={`Review ${student.first_name}`} size="lg">

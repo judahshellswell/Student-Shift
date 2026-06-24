@@ -6,11 +6,16 @@ import {
 } from '@/lib/firebase';
 import type { Application, ApplicationStatus, Job, Student, Business } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockedUsers } from '@/hooks/useBlocking';
 
+// Fetch applications made by current student, filtering out blocked businesses
 export function useStudentApplications() {
   const { user } = useAuthStore();
+  const { data: blockedUsers } = useBlockedUsers();
+  const blockedIds = new Set((blockedUsers || []).map((b) => b.blocked_id));
+
   return useQuery({
-    queryKey: ['studentApplications', user?.uid],
+    queryKey: ['studentApplications', user?.uid, Array.from(blockedIds).sort().join(',')],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
       const q = query(collection(db, 'applications'), where('student_id', '==', user.uid));
@@ -23,6 +28,9 @@ export function useStudentApplications() {
           const jobSnap = await getDoc(doc(db, 'jobs', appData.job_id));
           if (jobSnap.exists()) {
             const jobData = { id: jobSnap.id, ...jobSnap.data() } as Job;
+
+            if (jobData.business_id && blockedIds.has(jobData.business_id)) continue;
+
             if (jobData.business_id) {
               const bizSnap = await getDoc(doc(db, 'businesses', jobData.business_id));
               if (bizSnap.exists()) jobData.business = { id: bizSnap.id, ...bizSnap.data() } as Business;

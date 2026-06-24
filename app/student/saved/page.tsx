@@ -101,7 +101,7 @@ export default function SavedPage() {
                   </div>
                   <div className="mt-3">
                     <Link
-                      href={`/student?types=${search.filters.jobTypes.join(',')}&parishes=${search.filters.parishes.join(',')}&q=${search.filters.searchQuery || ''}`}
+                      href={`/student?jobTypes=${search.filters.jobTypes.join(',')}&parishes=${search.filters.parishes.join(',')}&searchQuery=${encodeURIComponent(search.filters.searchQuery || '')}`}
                     >
                       <Button variant="secondary" size="sm">Run search</Button>
                     </Link>

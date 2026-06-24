@@ -1,13 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useJobs, type JobFilters } from '@/hooks/useJobs';
+import { useCreateSavedSearch } from '@/hooks/useSavedSearches';
 import { useAuthStore } from '@/stores/authStore';
 import { useReadinessScore } from '@/hooks/useReadinessScore';
 import { JobCard } from '@/components/student/JobCard';
 import { JobCardSkeleton } from '@/components/ui/SkeletonCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { useToast } from '@/components/providers/ToastProvider';
 import { getParishOptionsForRegion, JOB_TYPE_LABELS, JOB_TYPES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -17,11 +23,27 @@ export default function StudentJobFeed() {
   const { studentProfile } = useAuthStore();
   const completedContent = (studentProfile as any)?.work_ready_completed ?? [];
   const readiness = useReadinessScore(studentProfile, completedContent);
+  const searchParams = useSearchParams();
 
   const [search, setSearch] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedParishes, setSelectedParishes] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [showSaveSearch, setShowSaveSearch] = useState(false);
+  const [searchName, setSearchName] = useState('');
+
+  // Apply saved search params when navigated from the Saved tab
+  useEffect(() => {
+    const jobTypes = searchParams.get('jobTypes');
+    const parishes = searchParams.get('parishes');
+    const searchQuery = searchParams.get('searchQuery');
+    if (jobTypes || parishes || searchQuery) {
+      if (jobTypes) setSelectedTypes(jobTypes.split(',').filter(Boolean));
+      if (parishes) setSelectedParishes(parishes.split(',').filter(Boolean));
+      if (searchQuery) setSearch(searchQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filters: JobFilters = {
     jobTypes: selectedTypes.length ? selectedTypes : undefined,
@@ -29,6 +51,29 @@ export default function StudentJobFeed() {
   };
 
   const { data: jobs, isLoading, error } = useJobs(filters);
+  const createSavedSearch = useCreateSavedSearch();
+  const { showSuccess, showError } = useToast();
+  const hasActiveFilters = selectedTypes.length > 0 || selectedParishes.length > 0 || search.trim().length > 0;
+
+  const handleSaveSearch = async () => {
+    if (!searchName.trim()) { showError('Please enter a name for this search.'); return; }
+    try {
+      await createSavedSearch.mutateAsync({
+        name: searchName.trim(),
+        filters: {
+          jobTypes: selectedTypes as any,
+          parishes: selectedParishes as any,
+          searchQuery: search.trim() || undefined,
+        },
+        notify_new_jobs: false,
+      });
+      setShowSaveSearch(false);
+      setSearchName('');
+      showSuccess('Search saved! View it in the Saved tab.');
+    } catch {
+      showError('Failed to save search. Please try again.');
+    }
+  };
 
   const filteredJobs = useMemo(() => {
     if (!jobs) return [];
@@ -116,6 +161,16 @@ export default function StudentJobFeed() {
         ))}
       </div>
 
+      {/* Save this search */}
+      {hasActiveFilters && (
+        <button
+          onClick={() => setShowSaveSearch(true)}
+          className="mb-4 text-xs font-medium text-primary hover:underline flex items-center gap-1"
+        >
+          💾 Save this search
+        </button>
+      )}
+
       {/* Results count */}
       {!isLoading && (
         <p className="text-xs text-text-secondary mb-4">
@@ -163,6 +218,31 @@ export default function StudentJobFeed() {
           )}
         </>
       )}
+
+      <Modal open={showSaveSearch} onClose={() => setShowSaveSearch(false)} title="Save search">
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Give your search a name so you can quickly find matching jobs later.
+          </p>
+          <Input
+            placeholder="e.g. Part-time in St Helier"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            autoFocus
+          />
+          <div className="text-xs text-text-secondary space-y-1">
+            <p className="font-medium text-gray-700">This search includes:</p>
+            {selectedTypes.length > 0 && <p>• Job types: {selectedTypes.map((t) => JOB_TYPE_LABELS[t as keyof typeof JOB_TYPE_LABELS] || t).join(', ')}</p>}
+            {selectedParishes.length > 0 && <p>• Locations: {selectedParishes.join(', ')}</p>}
+            {search.trim() && <p>• Search: &quot;{search.trim()}&quot;</p>}
+            {!selectedTypes.length && !selectedParishes.length && !search.trim() && <p>• All jobs</p>}
+          </div>
+          <div className="flex gap-3">
+            <Button variant="ghost" fullWidth onClick={() => setShowSaveSearch(false)}>Cancel</Button>
+            <Button fullWidth loading={createSavedSearch.isPending} onClick={handleSaveSearch}>Save search</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
