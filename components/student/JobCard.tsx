@@ -29,8 +29,12 @@ export function JobCard({ job, showMatchScore = false }: JobCardProps) {
   };
 
   const matchScore = job.matchScore;
-  const showScore = showMatchScore && matchScore !== undefined && matchScore >= 60;
-  const scoreColor = matchScore && matchScore >= 80 ? 'bg-success text-white' : 'bg-primary text-white';
+  const showScore = showMatchScore && matchScore !== undefined;
+  const scoreColor = matchScore !== undefined && matchScore >= 80
+    ? 'bg-success text-white'
+    : matchScore !== undefined && matchScore >= 60
+    ? 'bg-primary text-white'
+    : 'bg-gray-400 text-white';
 
   return (
     <Link href={`/student/jobs/${job.id}`} className="block">

@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/SkeletonCard';
 import { formatPay, formatHours, formatAbsoluteDate, formatRelativeDate } from '@/lib/utils';
 import { JOB_TYPE_LABELS } from '@/lib/constants';
 import { useToggleSaveJob, useSavedJobs } from '@/hooks/useJobs';
-import { useIsBlocked, useBlockUser } from '@/hooks/useBlocking';
+import { useIsBlocked, useBlockUser, useUnblockUser } from '@/hooks/useBlocking';
 import { useToast } from '@/components/providers/ToastProvider';
 
 export default function JobDetailPage() {
@@ -32,6 +32,7 @@ export default function JobDetailPage() {
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isBusinessBlocked = useIsBlocked(job?.business_id);
   const blockUser = useBlockUser();
+  const unblockUser = useUnblockUser();
   const { showSuccess, showError } = useToast();
 
   const isSaved = savedJobs?.some((s) => s.job_id === id) ?? false;
@@ -147,7 +148,32 @@ export default function JobDetailPage() {
             </div>
           </div>
           {job.business.description && <p className="text-sm text-gray-600">{job.business.description}</p>}
-          {!isBusinessBlocked && (
+          {isBusinessBlocked ? (
+            <div className="mt-3 rounded-lg bg-gray-50 border border-gray-200 p-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-text-secondary">You&apos;ve blocked this business.</p>
+              <button
+                onClick={async () => {
+                  if (!job?.business_id) return;
+                  try {
+                    await unblockUser.mutateAsync(job.business_id);
+                    showSuccess('Business unblocked.');
+                  } catch {
+                    showError('Failed to unblock business. Please try again.');
+                  }
+                }}
+                disabled={unblockUser.isPending}
+                className="flex-shrink-0 text-xs font-medium text-primary hover:underline disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {unblockUser.isPending && (
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                )}
+                Unblock
+              </button>
+            </div>
+          ) : (
             <button
               onClick={() => setShowBlockConfirm(true)}
               className="mt-3 text-xs text-gray-400 hover:text-error"
@@ -170,6 +196,8 @@ export default function JobDetailPage() {
 
         {hasApplied ? (
           <Button fullWidth disabled variant="ghost">Applied ✓</Button>
+        ) : isBusinessBlocked ? (
+          <Button fullWidth disabled variant="ghost">Blocked</Button>
         ) : !isWorkReady ? (
           <div className="flex-1 relative group">
             <Button fullWidth disabled>Apply now</Button>

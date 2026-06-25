@@ -126,9 +126,16 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
           </div>
           <button
             onClick={() => isBlocked ? handleToggleBlock() : setShowBlockConfirm(true)}
-            className="flex-shrink-0 text-xs text-gray-400 hover:text-error"
+            disabled={unblockUser.isPending}
+            className="flex-shrink-0 text-xs text-gray-400 hover:text-error disabled:opacity-50 flex items-center gap-1.5"
             title={isBlocked ? 'Unblock this student' : 'Block this student'}
           >
+            {unblockUser.isPending && (
+              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            )}
             {isBlocked ? 'Unblock' : 'Block'}
           </button>
         </div>
@@ -220,8 +227,8 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
           </div>
         )}
 
-        {/* Leave a review — only once hired */}
-        {isHired && (
+        {/* Leave a review — only once hired, and not if blocked */}
+        {isHired && !isBlocked && (
           <Button fullWidth variant="secondary" onClick={() => setShowReviewModal(true)}>
             Leave a review
           </Button>
