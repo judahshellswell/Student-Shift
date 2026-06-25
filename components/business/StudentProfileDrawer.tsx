@@ -79,6 +79,7 @@ export function StudentProfileDrawer({ student, open, onClose, applicationStatus
         await blockUser.mutateAsync(student.id);
         showSuccess(`${student.first_name} has been blocked.`);
         setShowBlockConfirm(false);
+        onClose();
       }
     } catch {
       showError('Failed to update block status. Please try again.');

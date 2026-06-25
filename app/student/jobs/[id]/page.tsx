@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useJob } from '@/hooks/useJobs';
 import { useHasApplied } from '@/hooks/useApplications';
 import { useAuthStore } from '@/stores/authStore';
@@ -21,6 +21,7 @@ import { useToast } from '@/components/providers/ToastProvider';
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { data: job, isLoading, error } = useJob(id);
   const { studentProfile } = useAuthStore();
   const completedContent = (studentProfile as any)?.work_ready_completed ?? [];
@@ -229,6 +230,7 @@ export default function JobDetailPage() {
                   await blockUser.mutateAsync(job.business_id);
                   showSuccess('Business blocked. Their jobs are now hidden from your feed.');
                   setShowBlockConfirm(false);
+                  router.replace('/student');
                 } catch {
                   showError('Failed to block business. Please try again.');
                 }

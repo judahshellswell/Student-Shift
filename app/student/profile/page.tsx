@@ -329,24 +329,34 @@ export default function StudentProfilePage() {
         <Card padding="md">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Blocked businesses ({blockedUsers.length})</h3>
           <div className="space-y-2">
-            {blockedUsers.map((blocked) => (
-              <div key={blocked.id} className="flex items-center justify-between py-1.5">
-                <p className="text-sm text-gray-700">{(blocked as any).blocked_name || blocked.blocked_id}</p>
-                <button
-                  onClick={async () => {
-                    try {
-                      await unblockUser.mutateAsync(blocked.blocked_id);
-                      showSuccess('Business unblocked.');
-                    } catch {
-                      showError('Failed to unblock. Please try again.');
-                    }
-                  }}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Unblock
-                </button>
-              </div>
-            ))}
+            {blockedUsers.map((blocked) => {
+              const isUnblocking = unblockUser.isPending && unblockUser.variables === blocked.blocked_id;
+              return (
+                <div key={blocked.id} className="flex items-center justify-between py-1.5">
+                  <p className="text-sm text-gray-700">{(blocked as any).blocked_name || blocked.blocked_id}</p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await unblockUser.mutateAsync(blocked.blocked_id);
+                        showSuccess('Business unblocked.');
+                      } catch {
+                        showError('Failed to unblock. Please try again.');
+                      }
+                    }}
+                    disabled={isUnblocking}
+                    className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {isUnblocking && (
+                      <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    )}
+                    Unblock
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}
