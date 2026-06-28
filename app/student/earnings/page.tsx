@@ -20,22 +20,26 @@ export default function EarningsPage() {
   const deleteEarning = useDeleteEarning();
   const { showSuccess, showError } = useToast();
   const [logOpen, setLogOpen] = useState(false);
-  const [form, setForm] = useState({ amount: '', hours_worked: '', date: new Date().toISOString().split('T')[0], description: '' });
+  const [form, setForm] = useState({ hourly_rate: '', hours_worked: '', date: new Date().toISOString().split('T')[0], description: '' });
+
+  const rateNum = parseFloat(form.hourly_rate);
+  const hoursNum = parseFloat(form.hours_worked);
+  const computedAmount = !isNaN(rateNum) && !isNaN(hoursNum) ? rateNum * hoursNum : null;
 
   const handleLog = async () => {
-    if (!form.amount || !form.hours_worked || !form.date) {
-      showError('Please fill in amount, hours, and date.'); return;
+    if (!form.hourly_rate || !form.hours_worked || !form.date) {
+      showError('Please fill in hourly rate, hours, and date.'); return;
     }
     try {
       await logEarning.mutateAsync({
-        amount: parseFloat(form.amount),
+        amount: parseFloat(form.hourly_rate) * parseFloat(form.hours_worked),
         hours_worked: parseFloat(form.hours_worked),
         date: form.date,
         description: form.description || undefined,
       });
       showSuccess('Earnings logged!');
       setLogOpen(false);
-      setForm({ amount: '', hours_worked: '', date: new Date().toISOString().split('T')[0], description: '' });
+      setForm({ hourly_rate: '', hours_worked: '', date: new Date().toISOString().split('T')[0], description: '' });
     } catch { showError('Could not log earnings.'); }
   };
 
@@ -112,9 +116,14 @@ export default function EarningsPage() {
       <Modal open={logOpen} onClose={() => setLogOpen(false)} title="Log earnings">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Amount (£)" type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+            <Input label="Hourly rate (£)" type="number" min="0" step="0.01" value={form.hourly_rate} onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })} placeholder="0.00" />
             <Input label="Hours worked" type="number" min="0" step="0.5" value={form.hours_worked} onChange={(e) => setForm({ ...form, hours_worked: e.target.value })} placeholder="0" />
           </div>
+          {computedAmount !== null && (
+            <div className="rounded-lg bg-green-50 p-3 text-center">
+              <p className="text-sm font-semibold text-success">Total: £{computedAmount.toFixed(2)}</p>
+            </div>
+          )}
           <Input label="Date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           <Textarea label="Description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Weekend shift at Joe's Cafe" rows={2} />
           <div className="flex gap-3">
