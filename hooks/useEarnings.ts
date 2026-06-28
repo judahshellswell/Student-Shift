@@ -79,8 +79,11 @@ export function useLogEarning() {
   return useMutation({
     mutationFn: async (data: CreateEarningForm) => {
       if (!user) throw new Error('Not authenticated');
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v !== undefined)
+      );
       const docRef = await addDoc(collection(db, 'earnings'), {
-        ...data,
+        ...cleanData,
         student_id: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
