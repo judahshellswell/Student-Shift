@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ReadinessScoreRing } from '@/components/ui/ReadinessScoreRing';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ReviewCard } from '@/components/student/ReviewCard';
+import { EarningsCard } from '@/components/student/EarningsCard';
 import { COMMON_SKILLS, DAYS_OF_WEEK, DAY_LABELS, getParishOptionsForRegion, REGIONS, PORTFOLIO_POST_TYPES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { getVideoDuration } from '@/lib/firebase';
@@ -167,6 +168,9 @@ export default function StudentProfilePage() {
           </div>
         </div>
       </Card>
+
+      {/* Earnings */}
+      <EarningsCard />
 
       {/* Bio */}
       <Card padding="md">
